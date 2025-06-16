@@ -4,12 +4,179 @@ import {
   HubConnection,
   HubConnectionState,
 } from "@microsoft/signalr";
-import { Send, Users, Wifi, WifiOff, Image } from "lucide-react";
+import { Send, Users, Wifi, WifiOff, Image, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+
+// Simple emoji picker component
+const EmojiPicker = ({ onEmojiSelect, isOpen, onClose }) => {
+  const emojis = [
+    "😀",
+    "😃",
+    "😄",
+    "😁",
+    "😆",
+    "😅",
+    "😂",
+    "🤣",
+    "😊",
+    "😇",
+    "🙂",
+    "🙃",
+    "😉",
+    "😌",
+    "😍",
+    "🥰",
+    "😘",
+    "😗",
+    "😙",
+    "😚",
+    "😋",
+    "😛",
+    "😝",
+    "😜",
+    "🤪",
+    "🤨",
+    "🧐",
+    "🤓",
+    "😎",
+    "🤩",
+    "🥳",
+    "😏",
+    "😒",
+    "😞",
+    "😔",
+    "😟",
+    "😕",
+    "🙁",
+    "☹️",
+    "😣",
+    "😖",
+    "😫",
+    "😩",
+    "🥺",
+    "😢",
+    "😭",
+    "😤",
+    "😠",
+    "😡",
+    "🤬",
+    "🤯",
+    "😳",
+    "🥵",
+    "🥶",
+    "😱",
+    "😨",
+    "😰",
+    "😥",
+    "😓",
+    "🤗",
+    "🤔",
+    "🤭",
+    "🤫",
+    "🤥",
+    "😶",
+    "😐",
+    "😑",
+    "😬",
+    "🙄",
+    "😯",
+    "😦",
+    "😧",
+    "😮",
+    "😲",
+    "🥱",
+    "😴",
+    "🤤",
+    "😪",
+    "😵",
+    "🤐",
+    "🥴",
+    "🤢",
+    "🤮",
+    "🤧",
+    "😷",
+    "🤒",
+    "🤕",
+    "🤑",
+    "🤠",
+    "😈",
+    "👍",
+    "👎",
+    "👌",
+    "✌️",
+    "🤞",
+    "🤟",
+    "🤘",
+    "🤙",
+    "👈",
+    "👉",
+    "👆",
+    "🖕",
+    "👇",
+    "☝️",
+    "👋",
+    "🤚",
+    "🖐️",
+    "✋",
+    "🖖",
+    "👏",
+    "🙌",
+    "🤲",
+    "🤝",
+    "🙏",
+    "✍️",
+    "💅",
+    "🤳",
+    "💪",
+    "🦾",
+    "🦿",
+    "🦵",
+    "🦶",
+    "👂",
+    "🦻",
+    "👃",
+    "🧠",
+    "🫀",
+    "🫁",
+    "🦷",
+    "🦴",
+    "👀",
+    "👁️",
+    "👅",
+    "👄",
+    "💋",
+    "🩸",
+    "👶",
+    "🧒",
+    "👦",
+    "👧",
+  ];
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-80 max-h-60 overflow-y-auto z-50">
+      <div className="grid grid-cols-10 gap-1">
+        {emojis.map((emoji, index) => (
+          <button
+            key={index}
+            onClick={() => {
+              onEmojiSelect(emoji);
+              onClose();
+            }}
+            className="w-8 h-8 text-lg hover:bg-gray-100 rounded flex items-center justify-center transition-colors"
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 interface Message {
   id: string;
@@ -39,8 +206,10 @@ const ChatApp = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [typingUser, setTypingUser] = useState("");
   const [usingSimulatedMode, setUsingSimulatedMode] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const scrollToBottom = () => {
@@ -50,6 +219,23 @@ const ChatApp = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Listen for localStorage changes (for simulated multi-user mode)
   useEffect(() => {
@@ -337,6 +523,10 @@ const ChatApp = () => {
     }
   };
 
+  const handleEmojiSelect = (emoji: string) => {
+    setMessage((prev) => prev + emoji);
+  };
+
   const handleTyping = async (typing: boolean) => {
     try {
       if (connection && connection.state === HubConnectionState.Connected) {
@@ -544,7 +734,7 @@ const ChatApp = () => {
 
         {/* Message Input */}
         <Card className="p-4 shadow-sm">
-          <div className="flex gap-2">
+          <div className="flex gap-2 relative" ref={emojiPickerRef}>
             <input
               ref={fileInputRef}
               type="file"
@@ -560,6 +750,19 @@ const ChatApp = () => {
             >
               <Image className="w-4 h-4" />
             </Button>
+            <Button
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+            >
+              <Smile className="w-4 h-4" />
+            </Button>
+            <EmojiPicker
+              isOpen={showEmojiPicker}
+              onEmojiSelect={handleEmojiSelect}
+              onClose={() => setShowEmojiPicker(false)}
+            />
             <Input
               type="text"
               value={message}
